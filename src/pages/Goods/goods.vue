@@ -1,0 +1,229 @@
+<template>
+  <div class="goods">
+    <div class="nav">
+      <div class="w">
+        <a href="javascript:;" :class="{active:sortType===1}" @click="reset()">综合排序</a>
+        <a href="javascript:;" @click="sortByPrice(2)" :class="{active:sortType===2}">价格从低到高</a>
+        <a href="javascript:;" @click="sortByPrice(3)" :class="{active:sortType===3}">价格从高到低</a>
+        <div class="price-interval">
+          <input type="number" class="input" placeholder="价格" v-model="min">
+          <span style="margin: 0 5px"> - </span>
+          <input type="number" placeholder="价格" v-model="max">
+          <y-button text="确定" classStyle="main-btn" @btnClick="reset" style="margin-left: 10px;"></y-button>
+        </div>
+      </div>
+    </div>
+
+    <div v-loading="loading" element-loading-text="加载中..." class="img-item" v-if="goods != ''">
+      <!--商品-->
+      <div class="goods-box w">
+        <mall-goods v-for="(item,i) in goods" :key="i" :msg="item"></mall-goods>
+      </div>
+
+      <el-pagination
+        @size-change="handleSizeChange"
+        @current-change="handleCurrentChange"
+        :current-page="currentPage"
+        :page-sizes="[4, 8, 12]"
+        :page-size="pageSize"
+        layout="total, sizes, prev, pager, next, jumper"
+        :total="total">
+      </el-pagination>
+    </div>
+    <div v-loading="loading" element-loading-text="加载中..." class="no-info" v-else-if="goods == ''">
+      <div class="no-data">
+        <img src="/static/images/no-search.png">
+        <br> 抱歉！没有为您找到相关的商品
+      </div>
+    
+    </div>
+    <div v-else>
+      <div class="no-data">
+        <img src="../../../static/images/error.png">
+        <br> 抱歉！出错了...
+      </div>
+   
+    </div>
+  </div>
+</template>
+<script>
+  //import {getAllGoods} from '../../server/shop'
+  import {productHome} from '../../server/shop'
+  import mallGoods from '../../components/mallGoods'
+  import YButton from '../../components/YButton'
+  //import YShelf from '../../components/shelf'
+  export default {
+    data () {
+      return {
+        goods: [0],
+        min: '',
+        max: '',
+        loading: true,
+        timer: null,
+        sortType: 1,
+        windowHeight: null,
+        windowWidth: null,
+        recommend: [],
+        sort: '',
+        currentPage: 1,
+        total: 0,
+        pageSize: 8
+      }
+    },
+    methods: {
+      handleSizeChange (val) {
+        this.pageSize = val
+        this._getAllGoods()
+        this.loading = true
+      },
+      handleCurrentChange (val) {
+        this.currentPage = val
+        this._getAllGoods()
+        this.loading = true
+      },
+      _getAllGoods () {
+        let params={
+          sort:this.sort,
+          pricemin:this.min,
+          pricemax:this.max
+        }
+        console.log(this.min,"paixuleixing")
+        productHome(params).then(res => {
+          if (res.code===200) {
+            let json=JSON.parse(res.data)
+            this.total =json.length
+            while(this.currentPage != 1 && this.pageSize*(this.currentPage-1) >= json.length){
+                            this.currentPage--
+            }
+            this.goods = json.slice(this.pageSize*(this.currentPage-1), this.pageSize*this.currentPage)
+          }
+          this.loading = false
+        })
+      },
+      // 默认排序
+      reset () {
+        this.sortType = 1
+        this.sort = ''
+        this.currentPage = 1
+        this.loading = true
+        this._getAllGoods()
+      },
+      // 价格排序
+      sortByPrice (v) {
+        this.sortType=v
+        this.sort = v
+        this.currentPage = 1
+        this.loading = true
+        this._getAllGoods()
+      }
+    },
+    created () {
+    },
+    mounted () {
+      this.windowHeight = window.innerHeight
+      this.windowWidth = window.innerWidth
+      this._getAllGoods()
+      // productHome().then(res => {
+      //   let data = res.result
+      //   this.recommend = data.home_hot
+      // })
+    },
+    components: {
+      mallGoods,
+      YButton,
+      //YShelf
+    }
+  }
+</script>
+<style lang="scss" rel="stylesheet/scss" scoped>
+  @import "../../assets/style/mixin";
+  @import "../../assets/style/theme";
+    
+  .nav {
+    margin-left: 180px;
+    height: 60px;
+    line-height: 60px;
+    > div {
+      display: flex;
+      align-items: center;
+      a {
+        padding: 0 15px;
+        height: 100%;
+        @extend %block-center;
+        font-size: 12px;
+        color: #999;
+        &.active {
+          color: #5683EA;
+        }
+        &:hover {
+          color: #5683EA;
+        }
+      }
+      input {
+        @include wh(80px, 30px);
+        border: 1px solid #ccc;
+      }
+      input + input {
+        margin-left: 10px;
+      }
+    }
+    .price-interval {
+      padding: 0 15px;
+      @extend %block-center;
+      input[type=number] {
+        border: 1px solid #ccc;
+        text-align: center;
+        background: none;
+        border-radius: 5px;
+      }
+    }
+  }
+
+  .goods-box {
+    > div {
+      float: left;
+      border: 1px solid #efefef;
+      // border :10px #efefef;
+    }
+    margin:10px 180px 10px 180px;
+  }
+
+  .no-info {
+    padding: 100px 0;
+    text-align: center;
+    font-size: 30px;
+    display: flex;
+    flex-direction: column;
+    .no-data{
+      align-self: center;
+    }
+  }
+
+  .img-item{
+    display: flex;
+    flex-direction: column;
+  }
+
+  .el-pagination{
+    align-self: flex-end;
+    margin: 3vw 10vw 2vw;
+  }
+
+  .section {
+    padding-top: 8vw;
+    margin-bottom: -5vw;
+    width: 1218px;
+    align-self: center;
+  }
+
+  .recommend {
+    display: flex;
+    > div {
+      flex: 1;
+      width: 25%;
+    }
+  }
+
+
+
+</style>
